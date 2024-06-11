@@ -13,3 +13,4 @@ chrono = { version = "0.4", features = ["serde"] }
 mongodb = "2.1"
 bson = { version = "2", features = ["chrono-0_4"] } # Needed for using chrono datetime in doc
 serde = "1" # Used in the Map Data into Structs section
+futures-util = "0.3"

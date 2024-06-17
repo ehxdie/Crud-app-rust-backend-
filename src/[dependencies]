@@ -1,0 +1,2 @@
+[dependencies]
+futures-util = "0.3"

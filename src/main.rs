@@ -22,6 +22,13 @@ struct Workout {
 
 const COLLECTION: &str = "workouts";
 
+#[derive(Debug,Serialize, Deserialize)]
+struct ErrorResponse {
+    message: String,
+}
+
+impl warp::reject::Reject for ErrorResponse {}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Load the MongoDB connection string from an environment variable:
@@ -32,8 +39,76 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Ok(client) => {
             // MongoDB connection successful, start the Warp server
             println!("Successfully connected to MongoDB");
+
+        let get_workouts_route = warp::path("workouts")
+   .and(warp::get())
+   .map(move || async {
+        let client = client.clone();
+        match get_workouts(&client).await {
+            Ok(workouts) => warp::reply::json(&workouts),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
+    });
+
+let get_one_workout_route = warp::path!("workouts" / String)
+   .and(warp::get())
+   .map(move |id: String| async move {
+        let client = client.clone();
+        match get_one_workout(&client, &id).await {
+            Ok(workout) => warp::reply::json(&workout),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
+    });
+
+let create_workout_route = warp::path("workouts")
+   .and(warp::post())
+   .and(warp::body::json())
+   .map(move |workout: Workout| async move {
+        let client = client.clone();
+        match create_workout(&client, workout).await {
+            Ok(new_workout) => warp::reply::json(&new_workout),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
+    });
+
+let delete_workout_route = warp::path!("workouts" / String)
+   .and(warp::delete())
+   .map(move |id: String| async move {
+        let client = client.clone();
+        match delete_workout(&client, &id).await {
+            Ok(deleted_workout) => warp::reply::json(&deleted_workout),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
+    });
+
+       let update_workout_route = warp::path!("workouts" / String)
+   .and(warp::put())
+   .and(warp::body::json())
+   .map(move |id: String, workout: Workout| async move {
+        let client = client.clone();
+        match update_workout(&client, &id, workout).await {
+            Ok(updated_workout) => warp::reply::json(&updated_workout),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
+    });
+
+        let routes = get_workouts_route
+        .or(get_one_workout_route)
+        .or(create_workout_route)
+        .or(delete_workout_route)
+        .or(update_workout_route);
             // Spawn the Warp server task
-                warp_server().await;
+                warp_server(routes).await;
             // Await the task and propagate any error
         }
         Err(e) => {
@@ -48,12 +123,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 }
 
-async fn warp_server() {
+async fn warp_server(routes: impl warp::Filter<Extract = impl warp::Reply> + Clone + Send + Sync + 'static) {
         //  Setting route
-   let health_route = warp::path!("health")
-         .map(|| StatusCode::OK);
-   let routes = health_route
-         .with(warp::cors().allow_any_origin());
+
+//    let route = routes
+//          .with(warp::cors().allow_any_origin());
      warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
      
 }
@@ -137,3 +211,4 @@ async fn update_workout(client: &Client, id: &str, update: Workout) -> Result<Op
         Ok(None)
     }
 }
+

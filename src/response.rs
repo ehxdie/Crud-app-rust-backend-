@@ -1,4 +1,44 @@
+use chrono::{DateTime, Utc};
 use serde::Serialize;
+
+#[derive(Serialize)]
+pub struct GenericResponse {
+    pub status: String,
+    pub message: String,
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Debug)]
+pub struct WorkoutResponse {
+    pub id: String,
+    pub title: String,
+    pub reps: i32,
+    pub load: i32,
+    pub createdAt: DateTime<Utc>,
+    pub updatedAt: DateTime<Utc>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct WorkoutData {
+    pub workout: WorkoutResponse,
+}
+
+#[derive(Serialize, Debug)]
+pub struct SingleWorkoutResponse {
+    pub status: String,
+    pub data: WorkoutData,
+}
+
+#[derive(Serialize, Debug)]
+pub struct WorkoutListResponse {
+    pub status: String,
+    pub results: usize,
+    pub workouts: Vec<WorkoutResponse>,
+}
+
+///////////////////////
+/// 
+/// use serde::Serialize;
 use warp::{reply::json, Filter, Rejection, Reply};
 
 type WebResult<T> = std::result::Result<T, Rejection>;

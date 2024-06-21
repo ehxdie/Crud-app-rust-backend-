@@ -31,7 +31,7 @@ struct Workout {
 
 const COLLECTION: &str = "workouts";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug,Serialize, Deserialize)]
 struct ErrorResponse {
     message: String,
 }
@@ -49,79 +49,75 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // MongoDB connection successful, start the Warp server
             println!("Successfully connected to MongoDB");
 
-            let get_workouts_route = warp::path("workouts").and(warp::get())
-   .and_then(move || {
-        let client = client.clone(); // Clone the Arc<Mutex<>> wrapped client
-        async move {
-            let client = client.lock().unwrap(); // Lock the client for exclusive access
-            match get_workouts(&*client).await {
-                Ok(workouts) => Ok(warp::reply::json(&workouts)),
-                Err(_) => Err(warp::reject::not_found()),
-            }
-        }.boxed() // Box the future returned by the async block
-    });
-
-           let get_one_workout_route = warp::path!("workouts" / String)
+        let get_workouts_route = warp::path("workouts")
    .and(warp::get())
-   .and_then(move |id: String| {
-        let client = client.clone(); // Clone the Arc<Mutex<>> wrapped client
-        async move {
-            let client = client.lock().unwrap(); // Lock the client for exclusive access
-            match get_one_workout(&*client, &id).await {
-                Ok(workout) => Ok(warp::reply::json(&workout)),
-                Err(_) => Err(warp::reject::not_found()),
-            }
-        }.boxed()
+   .map(move || async {
+        let client = client.clone();
+        match get_workouts(&client).await {
+            Ok(workouts) => warp::reply::json(&workouts),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
     });
 
-            let create_workout_route = warp::path("workouts")
+let get_one_workout_route = warp::path!("workouts" / String)
+   .and(warp::get())
+   .map(move |id: String| async move {
+        let client = client.clone();
+        match get_one_workout(&client, &id).await {
+            Ok(workout) => warp::reply::json(&workout),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
+    });
+
+let create_workout_route = warp::path("workouts")
    .and(warp::post())
    .and(warp::body::json())
-   .and_then(move |workout: Workout| {
-        let client = client.clone(); // Clone the Arc<Mutex<>> wrapped client
-        async move {
-            let client = client.lock().unwrap(); // Lock the client for exclusive access
-            match create_workout(&*client, workout).await {
-                Ok(new_workout) => Ok(warp::reply::json(&new_workout)),
-                Err(_) => Err(warp::reject::not_found()),
-            }
-        }.boxed()
+   .map(move |workout: Workout| async move {
+        let client = client.clone();
+        match create_workout(&client, workout).await {
+            Ok(new_workout) => warp::reply::json(&new_workout),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
     });
 
-            let delete_workout_route = warp::path!("workouts" / String)
+let delete_workout_route = warp::path!("workouts" / String)
    .and(warp::delete())
-   .and_then(move |id: String| {
-        let client = client.clone(); // Clone the Arc<Mutex<>> wrapped client
-        async move {
-            let client = client.lock().unwrap(); // Lock the client for exclusive access
-            match delete_workout(&*client, &id).await {
-                Ok(deleted_workout) => Ok(warp::reply::json(&deleted_workout)),
-                Err(_) => Err(warp::reject::not_found()),
-            }
-        }.boxed()
+   .map(move |id: String| async move {
+        let client = client.clone();
+        match delete_workout(&client, &id).await {
+            Ok(deleted_workout) => warp::reply::json(&deleted_workout),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
     });
 
-            let update_workout_route = warp::path!("workouts" / String)
+       let update_workout_route = warp::path!("workouts" / String)
    .and(warp::put())
    .and(warp::body::json())
-   .and_then(move |id: String, workout: Workout| {
-        let client = client.clone(); // Clone the Arc<Mutex<>> wrapped client
-        async move {
-            let client = client.lock().unwrap(); // Lock the client for exclusive access
-            match update_workout(&*client, &id, workout).await {
-                Ok(updated_workout) => Ok(warp::reply::json(&updated_workout)),
-                Err(_) => Err(warp::reject::not_found()),
-            }
-        }.boxed()
+   .map(move |id: String, workout: Workout| async move {
+        let client = client.clone();
+        match update_workout(&client, &id, workout).await {
+            Ok(updated_workout) => warp::reply::json(&updated_workout),
+            Err(_) =>  warp::reply::json(&ErrorResponse {
+        message: "Failed to get workouts".to_string(),
+    }),
+        }
     });
 
-            let routes = get_workouts_route
-                .or(get_one_workout_route)
-                .or(create_workout_route)
-                .or(delete_workout_route)
-                .or(update_workout_route);
+        let routes = get_workouts_route
+        .or(get_one_workout_route)
+        .or(create_workout_route)
+        .or(delete_workout_route)
+        .or(update_workout_route);
             // Spawn the Warp server task
-            warp_server(routes).await;
+                warp_server(routes).await;
             // Await the task and propagate any error
         }
         Err(e) => {
@@ -133,14 +129,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn warp_server(
-    routes: impl warp::Filter<Extract = impl warp::Reply> + Clone + Send + Sync + 'static,
-) {
-    //  Setting route
+async fn warp_server(routes: impl warp::Filter<Extract = impl warp::Reply> + Clone + Send + Sync + 'static) {
+        //  Setting route
 
-    //    let route = routes
-    //          .with(warp::cors().allow_any_origin());
-    warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
+//    let route = routes
+//          .with(warp::cors().allow_any_origin());
+     warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
+     
 }
 
 async fn connect_to_mongo(uri: &str) -> Result<Arc<Mutex<Client>>, Box<dyn Error>> {
